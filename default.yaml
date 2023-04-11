@@ -49,7 +49,6 @@ provision:
     #!/bin/bash
     set -eux -o pipefail
     systemctl --user enable --now podman.socket
-    sudo loginctl enable-linger $USER
     sudo usermod -aG systemd-journal $USER
 probes:
 - script: |
