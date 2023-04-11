@@ -19,7 +19,6 @@ images:
 
 mounts:
 - location: "~"
-  mountPoint: null
   writable: true
 - location: "/tmp/lima"
   writable: true
@@ -42,12 +41,16 @@ provision:
       | tee /etc/apt/sources.list.d/devel:kubic:libcontainers:unstable.list > /dev/null
     apt-get update -qq
     apt-get -qq -y install podman qemu-user-static
+    echo "net.ipv4.ip_unprivileged_port_start=80" >> /etc/sysctl.conf
+    sysctl --system
     command -v podman >/dev/null 2>&1 && exit 0
 - mode: user
   script: |
     #!/bin/bash
     set -eux -o pipefail
     systemctl --user enable --now podman.socket
+    sudo loginctl enable-linger $USER
+    sudo usermod -aG systemd-journal $USER
 probes:
 - script: |
     #!/bin/bash
