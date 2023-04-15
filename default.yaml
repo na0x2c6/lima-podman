@@ -1,6 +1,6 @@
 vmType: "vz"
 mountType: "virtiofs"
-memory: "8GiB"
+memory: "4GiB"
 
 images:
 # Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
