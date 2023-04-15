@@ -52,6 +52,11 @@ provision:
     set -eux -o pipefail
     systemctl --user enable --now podman.socket
     sudo usermod -aG systemd-journal $USER
+    mkdir -p ~/.config/containers
+    cat <<EOF > ~/.config/containers/containers.conf
+    [engine]
+    database_backend = "sqlite"
+    EOF
 probes:
 - script: |
     #!/bin/bash
