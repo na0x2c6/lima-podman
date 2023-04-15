@@ -22,6 +22,8 @@ mounts:
   writable: true
 - location: "/tmp/lima"
   writable: true
+hostResolver:
+  enabled: false
 containerd:
   system: false
   user: false
