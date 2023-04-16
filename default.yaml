@@ -48,6 +48,13 @@ provision:
       mkdir -p /etc/tmpfiles.d
       echo "d /run/podman 0700 ${LIMA_CIDATA_USER} -" > /etc/tmpfiles.d/podman.conf
     fi
+    if [ ! -e /etc/containers/containers.conf ]; then
+      mkdir -p /etc/containers
+      cat <<-EOF > /etc/containers/containers.conf
+      [engine]
+      database_backend = "sqlite"
+    EOF
+    fi
     mkdir -p /etc/apt/keyrings
     curl -fsSL https://download.opensuse.org/repositories/devel:kubic:libcontainers:unstable/xUbuntu_$(lsb_release -rs)/Release.key \
       | gpg --dearmor \
@@ -68,11 +75,6 @@ provision:
     set -eux -o pipefail
     systemctl --user enable --now podman.socket
     sudo usermod -aG systemd-journal $USER
-    mkdir -p ~/.config/containers
-    cat <<EOF > ~/.config/containers/containers.conf
-    [engine]
-    database_backend = "sqlite"
-    EOF
 probes:
 - script: |
     #!/bin/bash
