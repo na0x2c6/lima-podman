@@ -84,6 +84,8 @@ probes:
       exit 1
     fi
   hint: See "/var/log/cloud-init-output.log" in the guest
+networks:
+- vzNAT: true
 portForwards:
 - guestSocket: "/run/podman/podman.sock"
   hostSocket: "{{.Dir}}/sock/podman-rootful.sock"
