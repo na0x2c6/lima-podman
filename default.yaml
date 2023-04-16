@@ -68,7 +68,6 @@ provision:
     systemctl enable --now podman.socket
     echo "net.ipv4.ip_unprivileged_port_start=80" >> /etc/sysctl.conf
     sysctl --system
-    command -v podman >/dev/null 2>&1 && exit 0
 - mode: user
   script: |
     #!/bin/bash
