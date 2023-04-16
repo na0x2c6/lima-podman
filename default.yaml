@@ -36,6 +36,18 @@ provision:
     #!/bin/bash
     set -eux -o pipefail
     export DEBIAN_FRONTEND=noninteractive
+    command -v podman >/dev/null 2>&1 && exit 0
+    if [ ! -e /etc/systemd/system/podman.socket.d/override.conf ]; then
+      mkdir -p /etc/systemd/system/podman.socket.d
+      cat <<-EOF >/etc/systemd/system/podman.socket.d/override.conf
+      [Socket]
+      SocketUser=${LIMA_CIDATA_USER}
+    EOF
+    fi
+    if [ ! -e /etc/tmpfiles.d/podman.conf ]; then
+      mkdir -p /etc/tmpfiles.d
+      echo "d /run/podman 0700 ${LIMA_CIDATA_USER} -" > /etc/tmpfiles.d/podman.conf
+    fi
     mkdir -p /etc/apt/keyrings
     curl -fsSL https://download.opensuse.org/repositories/devel:kubic:libcontainers:unstable/xUbuntu_$(lsb_release -rs)/Release.key \
       | gpg --dearmor \
@@ -46,6 +58,7 @@ provision:
       | tee /etc/apt/sources.list.d/devel:kubic:libcontainers:unstable.list > /dev/null
     apt-get update -qq
     apt-get -qq -y install podman qemu-user-static
+    systemctl enable --now podman.socket
     echo "net.ipv4.ip_unprivileged_port_start=80" >> /etc/sysctl.conf
     sysctl --system
     command -v podman >/dev/null 2>&1 && exit 0
@@ -70,12 +83,15 @@ probes:
     fi
   hint: See "/var/log/cloud-init-output.log" in the guest
 portForwards:
+- guestSocket: "/run/podman/podman.sock"
+  hostSocket: "{{.Dir}}/sock/podman-rootful.sock"
 - guestSocket: "/run/user/{{.UID}}/podman/podman.sock"
   hostSocket: "{{.Dir}}/sock/podman.sock"
 message: |
   To run `podman` on the host (assumes podman-remote is installed), run the following commands:
   ------
   podman system connection add lima-{{.Name}} "unix://{{.Dir}}/sock/podman.sock"
+  podman system connection add lima-{{.Name}}-rootful "unix://{{.Dir}}/sock/podman-rootful.sock" # for rootful
   podman system connection default lima-{{.Name}}
   podman{{if eq .HostOS "linux"}} --remote{{end}} run quay.io/podman/hello
   ------
