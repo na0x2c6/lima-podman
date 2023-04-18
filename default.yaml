@@ -3,19 +3,12 @@ mountType: "virtiofs"
 memory: "4GiB"
 
 images:
-# Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
-- location: "https://cloud-images.ubuntu.com/releases/22.04/release-20230210/ubuntu-22.04-server-cloudimg-amd64.img"
+- location: "https://github.com/lima-vm/alpine-lima/releases/download/v0.2.27/alpine-lima-std-3.17.0-x86_64.iso"
   arch: "x86_64"
-  digest: "sha256:4401cf7e994842f11398a54d0159b689b2fcace166be6147013f128ddb15875e"
-- location: "https://cloud-images.ubuntu.com/releases/22.04/release-20230210/ubuntu-22.04-server-cloudimg-arm64.img"
+  digest: "sha512:07b88838734de63edf302a531aaf57f5a48ec31b31b8a95740faa4fac11852b375c5c83180ff34311ee284b8123536b86b70f0606591b1986e9af2268f3ea675"
+- location: "https://github.com/lima-vm/alpine-lima/releases/download/v0.2.27/alpine-lima-std-3.17.0-aarch64.iso"
   arch: "aarch64"
-  digest: "sha256:d044311b6e2d838f1175a67a5f7fa6bc0936f8001180df539025ec6587c33d28"
-# Fallback to the latest release image.
-# Hint: run `limactl prune` to invalidate the cache
-- location: "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-amd64.img"
-  arch: "x86_64"
-- location: "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-arm64.img"
-  arch: "aarch64"
+  digest: "sha512:b8028c96385ea5be499e37c142cb9e9d9c861f2647ff7f8cceaf867961ef8878e34a8ba0e8cfe2e01ac082191048e7acc30534782b13c5ec4bea53dad5919c33"
 
 mounts:
 - location: "~"
@@ -35,45 +28,29 @@ provision:
   script: |
     #!/bin/bash
     set -eux -o pipefail
-    export DEBIAN_FRONTEND=noninteractive
     command -v podman >/dev/null 2>&1 && exit 0
-    if [ ! -e /etc/systemd/system/podman.socket.d/override.conf ]; then
-      mkdir -p /etc/systemd/system/podman.socket.d
-      cat <<-EOF >/etc/systemd/system/podman.socket.d/override.conf
-      [Socket]
-      SocketUser=${LIMA_CIDATA_USER}
+    apk add --no-cache podman openrc
+    rc-update add cgroups
+    rc-update add podman default
+    cat <<-EOF >>/etc/security/limits.conf
+    *               soft    nofile          unlimited
+    *               hard    nofile          unlimited
+    *               soft    stack           unlimited
+    *               hard    stack           unlimited
+    *               soft    memlock         unlimited
+    *               hard    memlock         unlimited
     EOF
-    fi
-    if [ ! -e /etc/tmpfiles.d/podman.conf ]; then
-      mkdir -p /etc/tmpfiles.d
-      echo "d /run/podman 0700 ${LIMA_CIDATA_USER} -" > /etc/tmpfiles.d/podman.conf
-    fi
-    if [ ! -e /etc/containers/containers.conf ]; then
-      mkdir -p /etc/containers
-      cat <<-EOF > /etc/containers/containers.conf
-      [engine]
-      database_backend = "sqlite"
+    cat <<-EOF >>/etc/init.d/podman
+    start() {
+            ebegin "Starting \${name}"
+            supervise-daemon podman --start --signal USR1 --pidfile /run/\${RC_SVCNAME}.pid --user \${command_user} -- \${command} \${command_args}
+            eend \$?
+            while [ ! -e /run/podman/podman.sock ] ; do sleep 1 ; done
+            chmod 777 /run/podman/podman.sock
+    }
     EOF
-    fi
-    mkdir -p /etc/apt/keyrings
-    curl -fsSL https://download.opensuse.org/repositories/devel:kubic:libcontainers:unstable/xUbuntu_$(lsb_release -rs)/Release.key \
-      | gpg --dearmor \
-      | tee /etc/apt/keyrings/devel_kubic_libcontainers_unstable.gpg > /dev/null
-    echo \
-      "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/devel_kubic_libcontainers_unstable.gpg]\
-        https://download.opensuse.org/repositories/devel:kubic:libcontainers:unstable/xUbuntu_$(lsb_release -rs)/ /" \
-      | tee /etc/apt/sources.list.d/devel:kubic:libcontainers:unstable.list > /dev/null
-    apt-get update -qq
-    apt-get -qq -y install podman qemu-user-static
-    systemctl enable --now podman.socket
-    echo "net.ipv4.ip_unprivileged_port_start=80" >> /etc/sysctl.conf
-    sysctl --system
-- mode: user
-  script: |
-    #!/bin/bash
-    set -eux -o pipefail
-    systemctl --user enable --now podman.socket
-    sudo usermod -aG systemd-journal $USER
+    rc-service podman start
+    chmod 777 /run/podman/podman.sock
 probes:
 - script: |
     #!/bin/bash
@@ -83,19 +60,18 @@ probes:
       exit 1
     fi
   hint: See "/var/log/cloud-init-output.log" in the guest
+env:
+  TMPDIR: /tmp
 networks:
 - vzNAT: true
 portForwards:
 - guestSocket: "/run/podman/podman.sock"
   hostSocket: "{{.Dir}}/sock/podman-rootful.sock"
-- guestSocket: "/run/user/{{.UID}}/podman/podman.sock"
-  hostSocket: "{{.Dir}}/sock/podman.sock"
 message: |
   To run `podman` on the host (assumes podman-remote is installed), run the following commands:
   ------
-  podman system connection add lima-{{.Name}} "unix://{{.Dir}}/sock/podman.sock"
   podman system connection add lima-{{.Name}}-rootful "unix://{{.Dir}}/sock/podman-rootful.sock" # for rootful
-  podman system connection default lima-{{.Name}}
+  podman system connection default lima-{{.Name}}-rootful
   podman{{if eq .HostOS "linux"}} --remote{{end}} run quay.io/podman/hello
   ------
 
