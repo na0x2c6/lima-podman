@@ -31,14 +31,6 @@ provision:
     apk add --no-cache podman openrc
     rc-update add cgroups
     rc-update add podman default
-    cat <<-EOF >>/etc/security/limits.conf
-    *               soft    nofile          unlimited
-    *               hard    nofile          unlimited
-    *               soft    stack           unlimited
-    *               hard    stack           unlimited
-    *               soft    memlock         unlimited
-    *               hard    memlock         unlimited
-    EOF
     cat <<-EOF >>/etc/init.d/podman
     start() {
             ebegin "Starting \${name}"
@@ -65,12 +57,11 @@ networks:
 - vzNAT: true
 portForwards:
 - guestSocket: "/run/podman/podman.sock"
-  hostSocket: "{{.Dir}}/sock/podman-rootful.sock"
+  hostSocket: "{{.Dir}}/sock/podman.sock"
 message: |
   To run `podman` on the host (assumes podman-remote is installed), run the following commands:
   ------
-  podman system connection add lima-{{.Name}}-rootful "unix://{{.Dir}}/sock/podman-rootful.sock" # for rootful
-  podman system connection default lima-{{.Name}}-rootful
+  podman system connection add lima-{{.Name}} "unix://{{.Dir}}/sock/podman.sock"
+  podman system connection default lima-{{.Name}}
   podman{{if eq .HostOS "linux"}} --remote{{end}} run quay.io/podman/hello
   ------
-
