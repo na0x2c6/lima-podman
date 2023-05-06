@@ -1,0 +1,89 @@
+vmType: "vz"
+mountType: "virtiofs"
+memory: "4GiB"
+
+images:
+- location: "https://github.com/lima-vm/alpine-lima/releases/download/v0.2.27/alpine-lima-std-3.17.0-x86_64.iso"
+  arch: "x86_64"
+  digest: "sha512:07b88838734de63edf302a531aaf57f5a48ec31b31b8a95740faa4fac11852b375c5c83180ff34311ee284b8123536b86b70f0606591b1986e9af2268f3ea675"
+- location: "https://github.com/lima-vm/alpine-lima/releases/download/v0.2.27/alpine-lima-std-3.17.0-aarch64.iso"
+  arch: "aarch64"
+  digest: "sha512:b8028c96385ea5be499e37c142cb9e9d9c861f2647ff7f8cceaf867961ef8878e34a8ba0e8cfe2e01ac082191048e7acc30534782b13c5ec4bea53dad5919c33"
+
+mounts:
+- location: "~"
+- location: "/tmp/lima"
+  writable: true
+hostResolver:
+  enabled: false
+dns:
+  - 8.8.8.8
+  - 8.8.4.4
+containerd:
+  system: false
+  user: false
+provision:
+- mode: system
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    command -v podman >/dev/null 2>&1 && exit 0
+    apk add --no-cache podman openrc
+    rc-update add cgroups
+    rc-update add podman default
+
+    cat <<-EOF >>/etc/conf.d/podman
+    podman_uri="unix:///run/user/$LIMA_CIDATA_UID/podman/podman.sock"
+    podman_user="$LIMA_CIDATA_USER"
+    EOF
+
+    mkdir -p "/run/user/$LIMA_CIDATA_UID/podman"
+    chown -R "$LIMA_CIDATA_USER:$LIMA_CIDATA_USER" "/run/user/$LIMA_CIDATA_UID"
+
+    cat <<-EOF >>/etc/subuid
+    $LIMA_CIDATA_USER:100000:65536
+    EOF
+
+    cat <<-EOF >>/etc/subgid
+    $LIMA_CIDATA_USER:100000:65536
+    EOF
+
+    cat <<-EOF >>/etc/sysctl.d/local.conf
+    net.ipv4.ip_unprivileged_port_start=80
+    EOF
+
+    sysctl -p /etc/sysctl.d/local.conf
+
+    cat <<-EOF >>/etc/security/limits.conf
+    *               soft    nofile          unlimited
+    *               hard    nofile          unlimited
+    *               soft    stack           unlimited
+    *               hard    stack           unlimited
+    *               soft    memlock         unlimited
+    *               hard    memlock         unlimited
+    EOF
+
+    rc-service podman start
+probes:
+- script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    if ! timeout 30s bash -c "until command -v podman >/dev/null 2>&1; do sleep 3; done"; then
+      echo >&2 "podman is not installed yet"
+      exit 1
+    fi
+  hint: See "/var/log/cloud-init-output.log" in the guest
+env:
+  TMPDIR: /tmp
+networks:
+- vzNAT: true
+portForwards:
+- guestSocket: "/run/user/{{.UID}}/podman/podman.sock"
+  hostSocket: "{{.Dir}}/sock/podman.sock"
+message: |
+  To run `podman` on the host (assumes podman-remote is installed), run the following commands:
+  ------
+  podman system connection add lima-{{.Name}} "unix://{{.Dir}}/sock/podman.sock"
+  podman system connection default lima-{{.Name}}
+  podman{{if eq .HostOS "linux"}} --remote{{end}} run quay.io/podman/hello
+  ------
