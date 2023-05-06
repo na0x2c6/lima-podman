@@ -27,34 +27,42 @@ provision:
   script: |
     #!/bin/bash
     set -eux -o pipefail
-    command -v podman >/dev/null 2>&1 && exit 0
-    apk add --no-cache podman openrc
-    rc-update add cgroups
-    rc-update add podman default
 
-    cat <<-EOF >>/etc/conf.d/podman
+    apk add podman
+    rc-update add cgroups
+
+    if ! egrep -q '^podman_uri' /etc/conf.d/podman ; then
+      cat <<-EOF > /etc/conf.d/podman
     podman_uri="unix:///run/user/$LIMA_CIDATA_UID/podman/podman.sock"
     podman_user="$LIMA_CIDATA_USER"
     EOF
+    fi
 
     mkdir -p "/run/user/$LIMA_CIDATA_UID/podman"
     chown -R "$LIMA_CIDATA_USER:$LIMA_CIDATA_USER" "/run/user/$LIMA_CIDATA_UID"
 
-    cat <<-EOF >>/etc/subuid
+    if [[ ! -e /etc/subuid ]] || ! egrep -q "^$LIMA_CIDATA_USER:" /etc/subuid ; then
+      cat <<-EOF > /etc/subuid
     $LIMA_CIDATA_USER:100000:65536
     EOF
+    fi
 
-    cat <<-EOF >>/etc/subgid
+    if [[ ! -e /etc/subgid ]] || ! egrep -q "^$LIMA_CIDATA_USER:" /etc/subgid ; then
+      cat <<-EOF > /etc/subgid
     $LIMA_CIDATA_USER:100000:65536
     EOF
+    fi
 
-    cat <<-EOF >>/etc/sysctl.d/local.conf
+    if [[ ! -e /etc/sysctl.d/local.conf ]] ; then
+      cat <<-EOF > /etc/sysctl.d/local.conf
     net.ipv4.ip_unprivileged_port_start=80
     EOF
+    fi
 
     sysctl -p /etc/sysctl.d/local.conf
 
-    cat <<-EOF >>/etc/security/limits.conf
+    if [[ ! -e /etc/security/limits.d/local.conf ]] ; then
+      cat <<-EOF > /etc/security/limits.d/local.conf
     *               soft    nofile          unlimited
     *               hard    nofile          unlimited
     *               soft    stack           unlimited
@@ -62,6 +70,7 @@ provision:
     *               soft    memlock         unlimited
     *               hard    memlock         unlimited
     EOF
+    fi
 
     rc-service podman start
 probes:

@@ -27,11 +27,12 @@ provision:
   script: |
     #!/bin/bash
     set -eux -o pipefail
-    command -v podman >/dev/null 2>&1 && exit 0
-    apk add --no-cache podman openrc
+
+    apk add podman
     rc-update add cgroups
-    rc-update add podman default
-    cat <<-EOF >>/etc/init.d/podman
+
+    if ! grep -q 'start()' /etc/init.d/podman ; then
+      cat <<-EOF >>/etc/init.d/podman
     start() {
             ebegin "Starting \${name}"
             supervise-daemon podman --start --signal USR1 --pidfile /run/\${RC_SVCNAME}.pid --user \${command_user} -- \${command} \${command_args}
@@ -40,6 +41,8 @@ provision:
             chmod 777 /run/podman/podman.sock
     }
     EOF
+    fi
+
     rc-service podman start
     chmod 777 /run/podman/podman.sock
 probes:
