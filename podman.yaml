@@ -28,7 +28,11 @@ provision:
     #!/bin/bash
     set -eux -o pipefail
 
-    apk add podman
+    # for podman v4.5.0 to use sqlite for backend_database
+    apk add --repository=https://dl-cdn.alpinelinux.org/alpine/edge/community podman
+    # for compatible with the edge version of conmon
+    apk add --repository=https://dl-cdn.alpinelinux.org/alpine/edge/main glib-dev
+
     rc-update add cgroups
 
     if ! egrep -q '^podman_uri' /etc/conf.d/podman ; then
