@@ -1,0 +1,141 @@
+vmType: "vz"
+mountType: "virtiofs"
+rosetta:
+  enabled: true
+  binfmt: true
+
+images:
+  - location: "https://github.com/lima-vm/alpine-lima/releases/download/v0.2.28/alpine-lima-std-3.18.0-x86_64.iso"
+    arch: "x86_64"
+    digest: "sha512:0f0c844d97a2a605cdaf0c4963d88ec8b7dca4ef50b6141c589102e65d7ddc47da9536a1cffe093f3fc7530236ce0ec2c24704475f500551afa6fc83bb6ddbe0"
+  - location: "https://github.com/lima-vm/alpine-lima/releases/download/v0.2.28/alpine-lima-std-3.18.0-aarch64.iso"
+    arch: "aarch64"
+    digest: "sha512:a8deab1e1948af1f27f808e855ab2fe5022c3a10cd6e9bb0fe007915bc5e40fe68b81ca8de28d234a7d70938669eb30ca7cb8220eda329a2303d0434c8d79d64"
+
+containerd:
+  system: false
+  user: false
+provision:
+  - mode: system
+    script: |
+      #!/bin/bash
+
+      # Workarounds for using rosetta.
+      # Reference:
+      # - https://github.com/lima-vm/lima/issues/1443#issuecomment-1489021272
+      # - https://github.com/rancher-sandbox/rancher-desktop/issues/3107#issuecomment-1480433055
+      set -eux -o pipefail
+
+      mount -t binfmt_misc binfmt_misc /proc/sys/fs/binfmt_misc
+
+      # 05-rosetta-volume.sh has already failed here
+      # but /mnt/lima-rosetta has succeeded in mounting.
+      # So once it is needed to umount before exec the script again.
+      umount /mnt/lima-rosetta
+      /mnt/lima-cidata/boot/05-rosetta-volume.sh
+
+      if [ -e /etc/runlevels/default/qemu-binfmt ] ; then
+        rm -f /etc/runlevels/default/qemu-binfmt
+      fi
+
+      if [ -e /etc/init.d/qemu-binfmt ] ; then
+        rm -f /etc/init.d/qemu-binfmt
+      fi
+
+  - mode: system
+    script: |
+      #!/bin/bash
+      set -eux -o pipefail
+
+      apk add podman
+
+  - mode: system
+    script: |
+      #!/bin/bash
+      set -eux -o pipefail
+
+      # For stability
+      mkdir -p /etc/containers/containers.conf.d/
+      if [[ -e /etc/containers/containers.conf.d/local.conf ]] ; then
+        exit 0
+      fi
+
+      cat <<-EOF > /etc/containers/containers.conf.d/local.conf
+      [engine]
+      database_backend = "sqlite"
+      EOF
+
+  - mode: system
+    script: |
+      #!/bin/bash
+      set -eux -o pipefail
+
+      if ! egrep -q '^podman_uri' /etc/conf.d/podman ; then
+        cat <<-EOF > /etc/conf.d/podman
+      podman_uri="unix:///run/user/$LIMA_CIDATA_UID/podman/podman.sock"
+      podman_user="$LIMA_CIDATA_USER"
+      EOF
+      fi
+
+      mkdir -p "/run/user/$LIMA_CIDATA_UID/podman"
+      chown -R "$LIMA_CIDATA_USER:$LIMA_CIDATA_USER" "/run/user/$LIMA_CIDATA_UID"
+
+      if [[ ! -e /etc/subuid ]] || ! egrep -q "^$LIMA_CIDATA_USER:" /etc/subuid ; then
+        cat <<-EOF > /etc/subuid
+      $LIMA_CIDATA_USER:100000:65536
+      EOF
+      fi
+
+      if [[ ! -e /etc/subgid ]] || ! egrep -q "^$LIMA_CIDATA_USER:" /etc/subgid ; then
+        cat <<-EOF > /etc/subgid
+      $LIMA_CIDATA_USER:100000:65536
+      EOF
+      fi
+
+      if [[ ! -e /etc/sysctl.d/local.conf ]] ; then
+        cat <<-EOF > /etc/sysctl.d/local.conf
+      net.ipv4.ip_unprivileged_port_start=80
+      EOF
+      fi
+
+      sysctl -p /etc/sysctl.d/local.conf
+
+      if [[ ! -e /etc/security/limits.d/local.conf ]] ; then
+        cat <<-EOF > /etc/security/limits.d/local.conf
+      *               soft    nofile          unlimited
+      *               hard    nofile          unlimited
+      *               soft    stack           unlimited
+      *               hard    stack           unlimited
+      *               soft    memlock         unlimited
+      *               hard    memlock         unlimited
+      EOF
+      fi
+
+  - mode: system
+    script: |
+      #!/bin/bash
+      set -eux -o pipefail
+
+      rc-service podman start
+
+probes:
+  - script: |
+      #!/bin/bash
+      set -eux -o pipefail
+      if ! timeout 30s bash -c "until command -v podman >/dev/null 2>&1; do sleep 3; done"; then
+        echo >&2 "podman is not installed yet"
+        exit 1
+      fi
+    hint: See "/var/log/cloud-init-output.log" in the guest
+env:
+  TMPDIR: /tmp
+portForwards:
+  - guestSocket: "/run/user/{{.UID}}/podman/podman.sock"
+    hostSocket: "{{.Dir}}/sock/podman.sock"
+message: |
+  To run `podman` on the host (assumes podman-remote is installed), run the following commands:
+  ------
+  podman system connection add lima-{{.Name}} "unix://{{.Dir}}/sock/podman.sock"
+  podman system connection default lima-{{.Name}}
+  podman{{if eq .HostOS "linux"}} --remote{{end}} run quay.io/podman/hello
+  ------
