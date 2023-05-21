@@ -20,6 +20,18 @@ provision:
   - mode: system
     script: |
       #!/bin/bash
+      # Update qemu for stability
+      # qemu-aarch64 on x86_64 and vice versa
+      # Ref: https://github.com/lima-vm/alpine-lima/blob/e7967f6a7f153cd8eff7e88f0edad693cb53cfde/genapkovl-lima.sh
+      OTHERARCH=aarch64
+      if [ "$(uname -m)" == "${OTHERARCH}" ]; then
+          OTHERARCH=x86_64
+      fi
+      apk add qemu-${OTHERARCH}
+
+  - mode: system
+    script: |
+      #!/bin/bash
       set -eux -o pipefail
 
       # For stability
