@@ -87,19 +87,19 @@ provision:
       rc-service podman start
 
 probes:
-- script: |
-    #!/bin/bash
-    set -eux -o pipefail
-    if ! timeout 30s bash -c "until command -v podman >/dev/null 2>&1; do sleep 3; done"; then
-      echo >&2 "podman is not installed yet"
-      exit 1
-    fi
-  hint: See "/var/log/cloud-init-output.log" in the guest
+  - script: |
+      #!/bin/bash
+      set -eux -o pipefail
+      if ! timeout 30s bash -c "until command -v podman >/dev/null 2>&1; do sleep 3; done"; then
+        echo >&2 "podman is not installed yet"
+        exit 1
+      fi
+    hint: See "/var/log/cloud-init-output.log" in the guest
 env:
   TMPDIR: /tmp
 portForwards:
-- guestSocket: "/run/user/{{.UID}}/podman/podman.sock"
-  hostSocket: "{{.Dir}}/sock/podman.sock"
+  - guestSocket: "/run/user/{{.UID}}/podman/podman.sock"
+    hostSocket: "{{.Dir}}/sock/podman.sock"
 message: |
   To run `podman` on the host (assumes podman-remote is installed), run the following commands:
   ------
