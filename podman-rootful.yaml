@@ -1,7 +1,3 @@
-vmType: "vz"
-mountType: "virtiofs"
-memory: "4GiB"
-
 images:
 - location: "https://github.com/lima-vm/alpine-lima/releases/download/v0.2.27/alpine-lima-std-3.17.0-x86_64.iso"
   arch: "x86_64"
@@ -10,15 +6,6 @@ images:
   arch: "aarch64"
   digest: "sha512:b8028c96385ea5be499e37c142cb9e9d9c861f2647ff7f8cceaf867961ef8878e34a8ba0e8cfe2e01ac082191048e7acc30534782b13c5ec4bea53dad5919c33"
 
-mounts:
-- location: "~"
-- location: "/tmp/lima"
-  writable: true
-hostResolver:
-  enabled: false
-dns:
-  - 8.8.8.8
-  - 8.8.4.4
 containerd:
   system: false
   user: false
@@ -70,8 +57,6 @@ probes:
   hint: See "/var/log/cloud-init-output.log" in the guest
 env:
   TMPDIR: /tmp
-networks:
-- vzNAT: true
 portForwards:
 - guestSocket: "/run/podman/podman.sock"
   hostSocket: "{{.Dir}}/sock/podman.sock"
