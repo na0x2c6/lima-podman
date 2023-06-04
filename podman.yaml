@@ -35,6 +35,9 @@ provision:
       fi
       apk add qemu-${OTHERARCH}
 
+      # To apply updated qemu
+      rc-service qemu-binfmt restart --ifstarted
+
   - mode: system
     script: |
       #!/bin/bash
