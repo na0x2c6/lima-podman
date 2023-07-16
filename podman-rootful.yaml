@@ -10,14 +10,14 @@ containerd:
   system: false
   user: false
 provision:
-  - mode: system
+  - mode: dependency
     script: |
       #!/bin/bash
       set -eux -o pipefail
 
       apk add podman
 
-  - mode: system
+  - mode: dependency
     script: |
       #!/bin/bash
       #
