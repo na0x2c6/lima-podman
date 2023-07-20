@@ -108,6 +108,11 @@ provision:
       #!/bin/bash
       set -eux -o pipefail
 
+      if [[ -e /sys/fs/cgroup/cgroup.controllers ]] ; then
+        exit 0
+      fi
+
+      # use cgroup v2
       mkdir -p /etc/rc.conf.d
       echo 'rc_cgroup_mode="unified"' > /etc/rc.conf.d/cgroup.conf
       rc-service cgroups restart --ifstarted
