@@ -59,18 +59,12 @@ provision:
       #!/bin/bash
       set -eux -o pipefail
 
-      if grep -q 'start()' /etc/init.d/podman ; then
+      if grep -E -q '^podman_user' /etc/conf.d/podman ; then
         exit 0
       fi
 
-      cat <<-EOF >>/etc/init.d/podman
-      start() {
-        ebegin "Starting \${name}"
-        supervise-daemon podman --start --signal USR1 --pidfile /run/\${RC_SVCNAME}.pid --user \${command_user} -- \${command} \${command_args}
-        eend \$?
-        while [ ! -e /run/podman/podman.sock ] ; do sleep 1 ; done
-        chmod 777 /run/podman/podman.sock
-      }
+      cat <<-EOF >>/etc/conf.d/podman
+      podman_user="root"
       EOF
 
   - mode: system
@@ -78,21 +72,16 @@ provision:
       #!/bin/bash
       set -eux -o pipefail
 
-      if [[ -e /sys/fs/cgroup/cgroup.controllers ]] ; then
-        exit 0
-      fi
-
-      # use cgroup v2
-      mkdir -p /etc/rc.conf.d
-      echo 'rc_cgroup_mode="unified"' > /etc/rc.conf.d/cgroup.conf
-      rc-service cgroups restart --ifstarted
+      rc-service podman start
 
   - mode: system
     script: |
       #!/bin/bash
       set -eux -o pipefail
 
-      rc-service podman start
+      while [ ! -e /run/podman/podman.sock ] ; do sleep 1 ; done
+      chmod 777 /run/podman/podman.sock
+
 probes:
   - script: |
       #!/bin/bash
