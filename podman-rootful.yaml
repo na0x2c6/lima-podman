@@ -1,10 +1,10 @@
 images:
-  - location: "https://github.com/lima-vm/alpine-lima/releases/download/v0.2.30/alpine-lima-std-3.18.0-x86_64.iso"
+  - location: "https://github.com/na0x2c6/alpine-lima/releases/download/v0.2.32-std-cgroup-experimental/alpine-lima-std-3.18.0-x86_64.iso"
     arch: "x86_64"
-    digest: "sha512:c5f00210ecc355c57dd2f44b23c3976d3af20f831a618d920e64fc0a5b1f99fa41640c06efe50bbc33228bc2d39e9ba435a6f2c76c5c06315cb8f5ada9584c91"
-  - location: "https://github.com/lima-vm/alpine-lima/releases/download/v0.2.30/alpine-lima-std-3.18.0-aarch64.iso"
+    digest: "sha512:c2cfb8f3bbd212d7194db56683dd19aff6f9e2492c7acd9f9a7b3b42895e081114a5cd5278cfa8439941d43a9ce25d330cedee4c9d3d77c9b1723b662b400420"
+  - location: "https://github.com/na0x2c6/alpine-lima/releases/download/v0.2.32-std-cgroup-experimental/alpine-lima-std-3.18.0-aarch64.iso"
     arch: "aarch64"
-    digest: "sha512:48ca7c15ae66fc68d86b5e25a769c273e253aaba4fd9a70a4e7f21fdc420b53829ba9fe17b730922938941639c3ed93bf5a560b6ce4252f9df3200d9f8f73280"
+    digest: "sha512:2ede1039bb473bfc389789e4ca1772df90fadc276ff9129245d24e750f55e1950c137af6f0c976316e870769ee7ec53095e4f5227b55157ee3fb3c700864ee6c"
 
 containerd:
   system: false
