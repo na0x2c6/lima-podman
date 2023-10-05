@@ -93,6 +93,7 @@ probes:
     hint: See "/var/log/cloud-init-output.log" in the guest
 env:
   TMPDIR: /tmp
+  LIMA_ALPINE_CGROUP_MODE: unified
 portForwards:
   - guestSocket: "/run/podman/podman.sock"
     hostSocket: "{{.Dir}}/sock/podman.sock"
