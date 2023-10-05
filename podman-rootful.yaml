@@ -15,7 +15,7 @@ provision:
       #!/bin/bash
       set -eux -o pipefail
 
-      apk add podman
+      apk add --repository="${LIMA_ALPINE_PODMAN_REPOSITORY:-https://dl-cdn.alpinelinux.org/alpine/v3.18/community/}" podman
 
   - mode: dependency
     script: |

@@ -30,6 +30,13 @@ networks:
   - vzNAT: true
 ```
 
+You can utilize the edge version of Podman by configuring the `LIMA_ALPINE_PODMAN_REPOSITORY` environment variable as follows:
+
+```yaml
+env:
+  LIMA_ALPINE_PODMAN_REPOSITORY: https://dl-cdn.alpinelinux.org/alpine/edge/community
+```
+
 For stability, this repository includes the following features:
 
 - Increases the version of qemu in the template script.
