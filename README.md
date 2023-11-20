@@ -37,10 +37,14 @@ env:
   LIMA_ALPINE_PODMAN_REPOSITORY: https://dl-cdn.alpinelinux.org/alpine/edge/community
 ```
 
+## Misc
+
 For stability, this repository includes the following features:
 
 - Increases the version of qemu in the template script.
 - Sets the podman database backend to sqlite. This was supported in podman 4.5.0.
+
+The rootless template includes installing [pasta](https://passt.top/passt/about/) and setting [`default_rootless_network_cmd="pasta"`](https://github.com/containers/common/blob/main/docs/containers.conf.5.md#network-table).
 
 ## License
 
