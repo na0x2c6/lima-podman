@@ -16,6 +16,23 @@ provision:
       set -eux -o pipefail
 
       apk add --repository="${LIMA_ALPINE_PODMAN_REPOSITORY:-https://dl-cdn.alpinelinux.org/alpine/v3.18/community/}" podman
+  - mode: dependency
+    script: |
+      #!/bin/bash
+      # Install pasta if necessary
+      if [[ "$LIMA_PODMAN_USE_PASTA" != "true" ]] ; then
+        exit 0
+      fi
+
+      if command -v pasta >/dev/null 2>&1 ; then
+        exit 0
+      fi
+
+      apk add make gcc linux-headers musl-dev
+      apk add --repository=https://dl-cdn.alpinelinux.org/alpine/edge/main coreutils-fmt
+      mkdir -p /usr/local/src
+      git clone --filter=blob:none https://passt.top/passt /usr/local/src/passt
+      make -C /usr/local/src/passt CFLAGS+="-include signal.h" install
 
   - mode: dependency
     script: |
@@ -45,13 +62,34 @@ provision:
 
       # For stability
       mkdir -p /etc/containers/containers.conf.d/
-      if [[ -e /etc/containers/containers.conf.d/local.conf ]] ; then
+      if [[ -e /etc/containers/containers.conf.d/sqlite.conf ]] ; then
         exit 0
       fi
 
-      cat <<-EOF > /etc/containers/containers.conf.d/local.conf
+      cat <<-EOF > /etc/containers/containers.conf.d/sqlite.conf
       [engine]
       database_backend = "sqlite"
+      EOF
+
+  - mode: system
+    script: |
+      #!/bin/bash
+      set -eux -o pipefail
+
+      # For pasta
+      if [[ "$LIMA_PODMAN_USE_PASTA" != "true" ]] ; then
+        rm -f /etc/containers/containers.conf.d/pasta.conf
+        exit 0
+      fi
+
+      mkdir -p /etc/containers/containers.conf.d/
+      if [[ -e /etc/containers/containers.conf.d/pasta.conf ]] ; then
+        exit 0
+      fi
+
+      cat <<-EOF > /etc/containers/containers.conf.d/pasta.conf
+      [network]
+      default_rootless_network_cmd = "pasta"
       EOF
 
   - mode: system
