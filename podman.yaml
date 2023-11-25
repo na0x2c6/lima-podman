@@ -13,13 +13,13 @@ provision:
   - mode: dependency
     script: |
       #!/bin/bash
-      set -eux -o pipefail
+      set -Eeux -o pipefail
 
       apk add --repository="${LIMA_ALPINE_PODMAN_REPOSITORY:-https://dl-cdn.alpinelinux.org/alpine/v3.18/community/}" podman
   - mode: dependency
     script: |
       #!/bin/bash
-      set -Eeo pipefail
+      set -Eeux -o pipefail
       # Install pasta
 
       if command -v pasta >/dev/null 2>&1 ; then
@@ -41,6 +41,7 @@ provision:
   - mode: dependency
     script: |
       #!/bin/bash
+      set -Eeux -o pipefail
       #
       # Update qemu for stability
       #
@@ -62,7 +63,7 @@ provision:
   - mode: system
     script: |
       #!/bin/bash
-      set -eux -o pipefail
+      set -Eeux -o pipefail
 
       # For stability
       mkdir -p /etc/containers/containers.conf.d/
@@ -78,7 +79,7 @@ provision:
   - mode: system
     script: |
       #!/bin/bash
-      set -eux -o pipefail
+      set -Eeux -o pipefail
 
       # For pasta
 
@@ -95,7 +96,7 @@ provision:
   - mode: system
     script: |
       #!/bin/bash
-      set -eux -o pipefail
+      set -Eeux -o pipefail
 
       if ! egrep -q '^podman_uri' /etc/conf.d/podman ; then
         cat <<-EOF > /etc/conf.d/podman
@@ -144,14 +145,14 @@ provision:
   - mode: system
     script: |
       #!/bin/bash
-      set -eux -o pipefail
+      set -Eeux -o pipefail
 
       rc-service podman start
 
 probes:
   - script: |
       #!/bin/bash
-      set -eux -o pipefail
+      set -Eeux -o pipefail
       if ! timeout 30s bash -c "until command -v podman >/dev/null 2>&1; do sleep 3; done"; then
         echo >&2 "podman is not installed yet"
         exit 1
