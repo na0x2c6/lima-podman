@@ -15,7 +15,12 @@ provision:
       #!/bin/bash
       set -Eeux -o pipefail
 
-      apk add --repository="${LIMA_ALPINE_PODMAN_REPOSITORY:-https://dl-cdn.alpinelinux.org/alpine/v3.18/community/}" podman
+      APK_FLAG=--update-cache
+      if ls /etc/apk/cache/ | grep  -E -q '^podman-' ; then
+        # Install from the cache if it exists
+        APK_FLAG=--no-network
+      fi
+      apk add ${APK_FLAG} --repository="${LIMA_ALPINE_PODMAN_REPOSITORY:-https://dl-cdn.alpinelinux.org/alpine/v3.18/community/}" podman
 
   - mode: dependency
     script: |
@@ -34,7 +39,13 @@ provision:
       if [ "$(uname -m)" == "${OTHERARCH}" ]; then
           OTHERARCH=x86_64
       fi
-      apk add qemu-${OTHERARCH}
+
+      APK_FLAG=
+      if ls /etc/apk/cache/ | grep  -E -q '^qemu-' ; then
+        # Install from the cache if it exists
+        APK_FLAG=--no-network
+      fi
+      apk add ${APK_FLAG} qemu-${OTHERARCH}
 
       # To apply updated qemu
       rc-service qemu-binfmt restart --ifstarted
