@@ -29,13 +29,14 @@ provision:
       apk add make gcc linux-headers musl-dev
       apk add --repository=https://dl-cdn.alpinelinux.org/alpine/edge/main coreutils-fmt
 
-      wget -O /tmp/passt.tar.gz https://passt.top/passt/snapshot/passt-2023_11_19.4f1709d.tar.gz
+      PASST_TAG=2023_11_19.4f1709d
+      wget -O /tmp/passt.tar.gz https://passt.top/passt/snapshot/passt-${PASST_TAG}.tar.gz
       echo '7d67c8b62242464b6a0a55d6cf5c08947ff5a78f33fdde8e13fd518fefbde926198eaca26531b0ec9e1a7e453cd413c3a26a5631cdfbaa0ce0ddc3ccc9fdf9e2  /tmp/passt.tar.gz' | sha512sum -c
 
       mkdir -p /usr/local/src/passt
       tar -xvzf /tmp/passt.tar.gz -C /usr/local/src/passt --strip-components 1
 
-      make -C /usr/local/src/passt CFLAGS+="-include signal.h" install
+      make -C /usr/local/src/passt CFLAGS+="-include signal.h" VERSION=${PASST_TAG} install
 
   - mode: dependency
     script: |
