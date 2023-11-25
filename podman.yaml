@@ -26,8 +26,7 @@ provision:
         exit 0
       fi
 
-      apk add make gcc linux-headers musl-dev
-      apk add --repository=https://dl-cdn.alpinelinux.org/alpine/edge/main coreutils-fmt
+      apk add make gcc linux-headers musl-dev coreutils
 
       PASST_TAG=2023_11_19.4f1709d
       wget -O /tmp/passt.tar.gz https://passt.top/passt/snapshot/passt-${PASST_TAG}.tar.gz
